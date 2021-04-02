@@ -8,8 +8,15 @@ from django.utils.text import slugify
 from django.views.generic import ListView, DetailView
 from markdown.extensions.toc import TocExtension
 from pure_pagination import PaginationMixin
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.serializers import DateField
 
 from .models import Post, Category, Tag
+from .serializers import PostListSerializer, PostRetrieveSerializer, CategorySerializer
+from rest_framework import viewsets, status
+from rest_framework import mixins
 
 
 class IndexView(PaginationMixin, ListView):
@@ -87,3 +94,37 @@ def search(request):
 
     post_list = Post.objects.filter(Q(title__icontains=q) | Q(body__icontains=q))
     return render(request, 'blog/index.html', {'post_list': post_list})
+
+
+class PostViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    serializer_class = PostListSerializer
+    queryset = Post.objects.all()
+    permission_classes = [AllowAny]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return PostListSerializer
+        elif self.action == 'retrieve':
+            return PostRetrieveSerializer
+        else:
+            return super().get_serializer_class()
+
+    @action(
+        methods=["GET"], detail=False, url_path="archive/dates", url_name="archive-date"
+    )
+    def list_archive_dates(self, request, *args, **kwargs):
+        dates = Post.objects.dates("created_time", "month", order="DESC")
+        date_field = DateField()
+        data = [date_field.to_representation(date) for date in dates]
+        return Response(data=data, status=status.HTTP_200_OK)
+
+
+class CategoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    serializer_class = CategorySerializer
+
+    pagination_class = None
+
+    def get_queryset(self):
+        return Category.objects.all().order_by("name")
