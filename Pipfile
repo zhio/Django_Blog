@@ -9,6 +9,11 @@ fabric = "*"
 [packages]
 django = "*"
 markdown = "*"
+faker = "*"
+django-pure-pagination = "*"
+django-haystack = "*"
+djangorestframework = "*"
+django-filter = "*"
 
 [requires]
 python_version = "3.9"
